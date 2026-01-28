@@ -34,53 +34,35 @@ Without this setting, Azure just deploys your code files but doesn't install dep
 
 ## The Solution
 
-### Option 1: Quick Fix via Azure CLI (FASTEST)
+### The REAL Fix - Use the Correct Deployment Method
 
-Run these commands right now to fix your deployed app:
+The issue is that different Azure deployment methods have different behaviors:
 
-```bash
-APP_NAME="apiopsdemoapp"
-RESOURCE_GROUP="p-swe-rg-backend"
+| Deployment Method | Triggers Oryx Build? | Command |
+|-------------------|---------------------|---------|
+| `az webapp deploy --type zip` | ❌ NO (RUN_FROM_PACKAGE) | Wrong |
+| `az webapp deployment source config-zip` | ✅ YES (Kudu/Oryx) | **CORRECT** |
+| GitHub Actions `azure/webapps-deploy@v2` | ❌ NO (by default) | Wrong |
 
-# Enable Oryx build - THIS IS THE KEY!
-az webapp config appsettings set \
-  --name $APP_NAME \
+**The fix:** Use `az webapp deployment source config-zip` which deploys through Kudu, triggering Oryx to build and install dependencies.
+
+### Updated GitHub Workflow
+
+The workflow now uses the correct deployment command:
+```yaml
+az webapp deployment source config-zip \
   --resource-group $RESOURCE_GROUP \
-  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
-
-# Set correct startup command
-az webapp config set \
   --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP \
-  --startup-file "gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --timeout 120"
-
-# Restart to trigger build
-az webapp restart \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP
-
-# Watch it come up
-az webapp log tail \
-  --name $APP_NAME \
-  --resource-group $RESOURCE_GROUP
+  --src deploy.zip
 ```
 
-After restart, Oryx will:
-1. Detect requirements.txt
-2. Install all packages (fastapi, uvicorn, pydantic, gunicorn, etc.)
-3. Start your app with the correct command
-4. Your app will be live! 🎉
-
-### Option 2: Redeploy via GitHub Actions
-
-The GitHub Actions workflow has been updated to automatically set `SCM_DO_BUILD_DURING_DEPLOYMENT=true`.
-
-Just commit and push:
-```bash
-git add .
-git commit -m "Fix Azure deployment - enable Oryx build"
-git push origin main
-```
+This will:
+1. Upload your source code to Kudu
+2. Oryx detects `requirements.txt`
+3. Creates virtual environment
+4. Runs `pip install -r requirements.txt`
+5. Installs: fastapi, uvicorn, pydantic, gunicorn, etc.
+6. Starts your app ✅
 
 ## Verification
 
