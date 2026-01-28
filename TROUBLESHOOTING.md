@@ -86,17 +86,26 @@ az webapp log download \
 
 ### 2. Module Not Found Errors
 
-**Cause:** Dependencies not installed correctly
+**Cause:** Dependencies not installed correctly - Azure Oryx build system not enabled
 
 **Solution:**
 ```bash
+# THIS IS THE MOST IMPORTANT FIX!
+# Enable Oryx build system to install dependencies
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
 # Restart the app to trigger reinstallation
 az webapp restart \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP
 
-# Or redeploy via GitHub Actions
+# Or redeploy via GitHub Actions (now includes this setting)
 ```
+
+**Explanation:** Azure App Service uses Oryx to build Python apps and install dependencies from requirements.txt. If `SCM_DO_BUILD_DURING_DEPLOYMENT` is not set to `true`, Azure won't run `pip install -r requirements.txt`, causing "ModuleNotFoundError" for uvicorn and other packages.
 
 ### 3. Container Timeout Issues
 

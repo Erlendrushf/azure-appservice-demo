@@ -14,7 +14,7 @@ The application has been tested locally and works perfectly:
 Added `gunicorn==23.0.0` which is required for Azure App Service.
 
 ### 2. **Updated startup.txt**
-Changed to use `$PORT` environment variable for flexibility.
+Changed to use proper timeout and logging parameters.
 
 ### 3. **Created startup.sh**
 A more robust startup script with proper logging and timeout settings.
@@ -22,35 +22,47 @@ A more robust startup script with proper logging and timeout settings.
 ### 4. **Python Version**
 Set to 3.11 (stable and well-supported) instead of 3.14.
 
+### 5. **Fixed GitHub Workflow**
+Separated build and deploy jobs, enabled Oryx build system for proper dependency installation.
+
+### 6. **Enable Azure Build System**
+Added SCM_DO_BUILD_DURING_DEPLOYMENT setting to ensure dependencies are installed.
+
 ## 🚀 Deploy to Fix Azure
 
-### Quick Fix Commands
+### Immediate Fix - Enable Oryx Build
 
-If your app is already deployed but showing errors:
+The root cause is that Azure isn't building your dependencies. Run these commands:
 
 ```bash
 # Set your variables
 APP_NAME="apiopsdemoapp"
 RESOURCE_GROUP="p-swe-rg-backend"
 
-# 1. Update the startup command
+# 1. Enable Oryx build system (THIS IS THE KEY FIX!)
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group $RESOURCE_GROUP \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
+
+# 2. Update the startup command
 az webapp config set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --startup-file "gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --timeout 120"
 
-# 2. Ensure Python version is correct
+# 3. Ensure Python version is correct
 az webapp config set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --linux-fx-version "PYTHON|3.11"
 
-# 3. Restart the app
+# 4. Restart the app
 az webapp restart \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP
 
-# 4. View logs to confirm
+# 5. View logs to confirm
 az webapp log tail \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP
