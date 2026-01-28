@@ -55,8 +55,12 @@ az webapp create \
 az webapp config set \
   --name $APP_NAME \
   --resource-group $RESOURCE_GROUP \
-  --startup-file "gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000"
+  --startup-file "gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --timeout 120"
 ```
+
+Alternatively, you can set it in the Azure Portal:
+- Go to your App Service > Configuration > General settings
+- Set Startup Command: `gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000 --timeout 120`
 
 ## Step 6: Create App Registration
 
